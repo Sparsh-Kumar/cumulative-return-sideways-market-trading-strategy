@@ -2,7 +2,6 @@ import json
 import os
 import logging
 import sys
-from unittest.mock import NonCallableMagicMock
 import requests
 from datetime import datetime, timedelta
 
@@ -117,8 +116,9 @@ class CumulativeTrend(WazirXHelper):
                 raise Exception('quantity is required.')
 
             # Getting data with t - 30 mins to t.
-            kLineDataBefore30Mins = self.kLineDataBeforeXMin(symbol, None, 30)
-            return json.loads(kLineDataBefore30Mins.content)
+            kLineDataBefore30MinsJSONData = json.loads(
+                self.kLineDataBeforeXMin(symbol, None, 30).content)
+            return kLineDataBefore30MinsJSONData
 
         except Exception as e:
             self.loggerInstance.logError(str(e))
