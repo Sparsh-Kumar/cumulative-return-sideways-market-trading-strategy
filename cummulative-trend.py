@@ -160,7 +160,12 @@ def main():
         jsonEnvContent, requestInstance, loggerInstance)
     kLineDataFrameBefore30Mins = cumulativeTrendStrategy.executeStrategyWith30MinTimeFrame(
         'btcinr', 100)
+
+    # Printing the data frame value
     print(kLineDataFrameBefore30Mins)
+
+    # Printing the graph value
+    print(kLineDataFrameBefore30Mins.Open.plot)
 
 
 if __name__ == '__main__':
