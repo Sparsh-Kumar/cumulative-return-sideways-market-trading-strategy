@@ -165,7 +165,7 @@ def main():
     print(kLineDataFrameBefore30Mins)
 
     # Printing the graph value
-    print(kLineDataFrameBefore30Mins.Open.plot)
+    kLineDataFrameBefore30Mins.Open.plot()
 
 
 if __name__ == '__main__':
