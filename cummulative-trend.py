@@ -128,6 +128,8 @@ class CumulativeTrend(WazirXHelper):
                 'Time', 'Open', 'High', 'Low', 'Close', 'Volume']
             kLineDataFrameBefore30Mins.set_index(
                 'Time', inplace=True, drop=True)
+
+            # Converting values to floating
             kLineDataFrameBefore30Mins = kLineDataFrameBefore30Mins.astype(
                 float)
             return kLineDataFrameBefore30Mins
