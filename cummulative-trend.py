@@ -4,6 +4,7 @@ import logging
 import sys
 import requests
 from datetime import datetime, timedelta
+import pandas as pd
 
 
 class Requests:
@@ -118,7 +119,18 @@ class CumulativeTrend(WazirXHelper):
             # Getting data with t - 30 mins to t.
             kLineDataBefore30MinsJSONData = json.loads(
                 self.kLineDataBeforeXMin(symbol, None, 30).content)
-            return kLineDataBefore30MinsJSONData
+            kLineDataFrameBefore30Mins = pd.DataFrame(
+                kLineDataBefore30MinsJSONData)
+
+            # Getting Last 6 records
+            kLineDataFrameBefore30Mins = kLineDataFrameBefore30Mins[:6]
+            kLineDataFrameBefore30Mins.columns = [
+                'Time', 'Open', 'High', 'Low', 'Close', 'Volume']
+            kLineDataFrameBefore30Mins.set_index(
+                'Time', inplace=True, drop=True)
+            kLineDataFrameBefore30Mins = kLineDataFrameBefore30Mins.astype(
+                float)
+            return kLineDataFrameBefore30Mins
 
         except Exception as e:
             self.loggerInstance.logError(str(e))
@@ -144,10 +156,9 @@ def main():
     })
     cumulativeTrendStrategy = CumulativeTrend(
         jsonEnvContent, requestInstance, loggerInstance)
-    kLineDataBefore30Mins = cumulativeTrendStrategy.executeStrategyWith30MinTimeFrame(
+    kLineDataFrameBefore30Mins = cumulativeTrendStrategy.executeStrategyWith30MinTimeFrame(
         'btcinr', 100)
-    for k in kLineDataBefore30Mins:
-        print(datetime.utcfromtimestamp(k[0]).strftime('%Y-%m-%d %H:%M:%S'))
+    print(kLineDataFrameBefore30Mins)
 
 
 if __name__ == '__main__':
