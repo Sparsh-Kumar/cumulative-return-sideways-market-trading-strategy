@@ -109,12 +109,10 @@ class WazirXHelper:
 
 
 class CumulativeTrend(WazirXHelper):
-    def executeStrategyWith30MinTimeFrame(self, symbol=None, quantity=None):
+    def getDataWith30MinTimeFrame(self, symbol=None):
         try:
             if not symbol:
                 raise Exception('symbol is required.')
-            if not quantity:
-                raise Exception('quantity is required.')
 
             # Getting data with t - 30 mins to t.
             kLineDataBefore30MinsJSONData = json.loads(
@@ -122,8 +120,6 @@ class CumulativeTrend(WazirXHelper):
             kLineDataFrameBefore30Mins = pd.DataFrame(
                 kLineDataBefore30MinsJSONData)
 
-            # Getting Last 6 records
-            kLineDataFrameBefore30Mins = kLineDataFrameBefore30Mins[:6]
             kLineDataFrameBefore30Mins.columns = [
                 'Time', 'Open', 'High', 'Low', 'Close', 'Volume']
             kLineDataFrameBefore30Mins.set_index(
@@ -137,6 +133,40 @@ class CumulativeTrend(WazirXHelper):
         except Exception as e:
             self.loggerInstance.logError(str(e))
             sys.exit()
+
+    def executeCumulativeTrendStrategy(self, quantityToTrade=100, percentageFell=-0.002, isEnteredTrade=False, ):
+        try:
+            if not quantityToTrade:
+                raise Exception('quantity is required')
+
+            # Getting the data for 30 min time frame.
+            kLineDataFrame = self.getDataWith30MinTimeFrame('xrpinr')
+
+            # Getting Last 6 records
+            # We can comment / uncomment the below line to get the last 6 candesticks data.
+            kLineDataFrame = kLineDataFrame[:6]
+
+            # Strategy Description
+            # Buy if asset fell more than 0.2% within the last 30 mins.
+            # Sell if asset arises by more than 1.5% or falls further by 0.15%
+            cumulativeReturnOfDataFrame = (
+                kLineDataFrame.Open.pct_change() + 1
+            ).cumprod() - 1
+
+            # If not entered the trade already
+            # TODO : We need to calculate volatility before taking into account the %age fell.
+            if not isEnteredTrade:
+                if cumulativeReturnOfDataFrame.iloc[-1] < percentageFell:
+                    # TODO: Create a market BUY order
+                    isEnteredTrade = True
+                else:
+                    print('No Trade Executed')
+            if isEnteredTrade:
+                pass
+
+        except Exception as e:
+            self.loggerInstance.logError(str(e))
+            sys.exit(1)
 
 
 def loadEnvironmentVariables(loggerInstance, jsonFileRelativePath):
@@ -158,14 +188,7 @@ def main():
     })
     cumulativeTrendStrategy = CumulativeTrend(
         jsonEnvContent, requestInstance, loggerInstance)
-    kLineDataFrameBefore30Mins = cumulativeTrendStrategy.executeStrategyWith30MinTimeFrame(
-        'btcinr', 100)
-
-    # Printing the data frame value
-    print(kLineDataFrameBefore30Mins)
-
-    # Printing the graph value
-    kLineDataFrameBefore30Mins.Open.plot()
+    cumulativeTrendStrategy.executeCumulativeTrendStrategy()
 
 
 if __name__ == '__main__':
