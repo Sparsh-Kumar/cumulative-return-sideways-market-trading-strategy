@@ -126,8 +126,10 @@ class CumulativeTrend(WazirXHelper):
 
             kLineDataFrameBefore30Mins.columns = [
                 'Time', 'Open', 'High', 'Low', 'Close', 'Volume']
-            kLineDataFrameBefore30Mins.set_index(
-                'Time', inplace=True, drop=True)
+
+            # We can make Time as an index column using the line below.
+            # kLineDataFrameBefore30Mins.set_index(
+            #    'Time', inplace=True, drop=True)
 
             # Converting values to floating
             kLineDataFrameBefore30Mins = kLineDataFrameBefore30Mins.astype(
@@ -138,7 +140,7 @@ class CumulativeTrend(WazirXHelper):
             self.loggerInstance.logError(str(e))
             sys.exit()
 
-    def executeCumulativeTrendStrategy(self, symbol=None, quantityToTrade=100, percentageFell=-0.002, percentageRise=0.15, isEnteredTrade=False):
+    def executeCumulativeTrendStrategy(self, symbol=None, quantityToTrade=100, percentageFell=-0.002, percentageRise=0.0015, isEnteredTrade=False):
         try:
             '''
                 Strategy Description 
@@ -149,37 +151,55 @@ class CumulativeTrend(WazirXHelper):
                 # Sell if asset arises by more than {{percentageRise}}% or falls further by 0.15%
             '''
             global totalAmount
+            timeOfTrade = None
             if not symbol:
                 raise Exception('Symbol is required.')
             if not quantityToTrade:
                 raise Exception('quantity is required.')
             while True:
-                # Sleep for 2 seconds because of API rate limiting.
+                # Sleep for 5 seconds because of API rate limiting.
                 time.sleep(5)
                 kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
                 kLineDataFrame = kLineDataFrame[:6]
                 cumulativeReturnOfDataFrame = (
-                    kLineDataFrame.Open.pct_change() + 1
+                    kLineDataFrame.Close.pct_change() + 1
                 ).cumprod() - 1
                 print('[*] Trying to BUY, Cum Ret at {} = {}'.format(datetime.now().strftime(
                     "%H:%M:%S"), cumulativeReturnOfDataFrame.iloc[-1]))
                 # TODO : We need to calculate volatility before taking into account the %age fell.
                 if not isEnteredTrade:
-                    if cumulativeReturnOfDataFrame.iloc[-1] < percentageFell:
+                    if cumulativeReturnOfDataFrame.iloc[-1] <= percentageFell:
                         # TODO: Create a market BUY order
                         priceToBuy = kLineDataFrame.iloc[-1]['Close'] * \
                             quantityToTrade
                         totalAmount -= priceToBuy
                         print('Buy Quantity = {}, At = {}, Total Amount Left = {}'.format(
                             quantityToTrade, priceToBuy, totalAmount))
+                        timeOfTrade = kLineDataFrame.iloc[-1]['Time']
                         isEnteredTrade = True
                         break
-            while True:
-                pass
-                # Sleep for 2 seconds because of API rate limiting
-                # time.sleep(5)
-                # kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
-
+            if isEnteredTrade:
+                while True:
+                    # Sleep for 5 seconds because of API rate limiting
+                    time.sleep(5)
+                    kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
+                    kLineDataFrameSinceBuy = kLineDataFrame[kLineDataFrame.Time > timeOfTrade]
+                    if len(kLineDataFrameSinceBuy) > 1:
+                        cumulativeReturnOfDataFrame = (
+                            kLineDataFrameSinceBuy.Close.pct_change() + 1
+                        ).cumprod() - 1
+                        print('[*] Trying to SELL, Cum Ret at {} = {}'.format(datetime.now().strftime(
+                            "%H:%M:%S"), cumulativeReturnOfDataFrame.iloc[-1]))
+                        # TODO : We need to calculate volatility before taking into account the %age rise.
+                        # or cumulativeReturnOfDataFrame.iloc[-1] <= percentageFell:
+                        if cumulativeReturnOfDataFrame.iloc[-1] >= percentageRise:
+                            # TODO : Create a market SELL order
+                            priceToSell = kLineDataFrameSinceBuy.iloc[-1]['Close'] * \
+                                quantityToTrade
+                            totalAmount += priceToSell
+                            print('Sell Quantity = {}, At = {}, Total Amount Left = {}'.format(
+                                quantityToTrade, priceToSell, totalAmount))
+                            break
         except Exception as e:
             self.loggerInstance.logError(str(e))
             sys.exit(1)
