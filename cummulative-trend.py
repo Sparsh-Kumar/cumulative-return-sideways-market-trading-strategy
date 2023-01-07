@@ -5,6 +5,10 @@ import sys
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
+import time
+
+# This would store the net profit / loss amount.
+totalAmount = 0
 
 
 class Requests:
@@ -134,35 +138,47 @@ class CumulativeTrend(WazirXHelper):
             self.loggerInstance.logError(str(e))
             sys.exit()
 
-    def executeCumulativeTrendStrategy(self, quantityToTrade=100, percentageFell=-0.002, isEnteredTrade=False, ):
+    def executeCumulativeTrendStrategy(self, symbol=None, quantityToTrade=100, percentageFell=-0.002, percentageRise=0.15, isEnteredTrade=False):
         try:
+            '''
+                Strategy Description 
+                ---------------------
+                # Getting the data for 30 min time frame.
+                # Getting Last 6 records
+                # Buy if asset fell more than {{percentageFell}}% within the last 30 mins.
+                # Sell if asset arises by more than {{percentageRise}}% or falls further by 0.15%
+            '''
+            global totalAmount
+            if not symbol:
+                raise Exception('Symbol is required.')
             if not quantityToTrade:
-                raise Exception('quantity is required')
-
-            # Getting the data for 30 min time frame.
-            kLineDataFrame = self.getDataWith30MinTimeFrame('xrpinr')
-
-            # Getting Last 6 records
-            # We can comment / uncomment the below line to get the last 6 candesticks data.
-            kLineDataFrame = kLineDataFrame[:6]
-
-            # Strategy Description
-            # Buy if asset fell more than 0.2% within the last 30 mins.
-            # Sell if asset arises by more than 1.5% or falls further by 0.15%
-            cumulativeReturnOfDataFrame = (
-                kLineDataFrame.Open.pct_change() + 1
-            ).cumprod() - 1
-
-            # If not entered the trade already
-            # TODO : We need to calculate volatility before taking into account the %age fell.
-            if not isEnteredTrade:
-                if cumulativeReturnOfDataFrame.iloc[-1] < percentageFell:
-                    # TODO: Create a market BUY order
-                    isEnteredTrade = True
-                else:
-                    print('No Trade Executed')
-            if isEnteredTrade:
+                raise Exception('quantity is required.')
+            while True:
+                # Sleep for 2 seconds because of API rate limiting.
+                time.sleep(5)
+                kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
+                kLineDataFrame = kLineDataFrame[:6]
+                cumulativeReturnOfDataFrame = (
+                    kLineDataFrame.Open.pct_change() + 1
+                ).cumprod() - 1
+                print('[*] Trying to BUY, Cum Ret at {} = {}'.format(datetime.now().strftime(
+                    "%H:%M:%S"), cumulativeReturnOfDataFrame.iloc[-1]))
+                # TODO : We need to calculate volatility before taking into account the %age fell.
+                if not isEnteredTrade:
+                    if cumulativeReturnOfDataFrame.iloc[-1] < percentageFell:
+                        # TODO: Create a market BUY order
+                        priceToBuy = kLineDataFrame.iloc[-1]['Close'] * \
+                            quantityToTrade
+                        totalAmount -= priceToBuy
+                        print('Buy Quantity = {}, At = {}, Total Amount Left = {}'.format(
+                            quantityToTrade, priceToBuy, totalAmount))
+                        isEnteredTrade = True
+                        break
+            while True:
                 pass
+                # Sleep for 2 seconds because of API rate limiting
+                # time.sleep(5)
+                # kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
 
         except Exception as e:
             self.loggerInstance.logError(str(e))
@@ -188,7 +204,7 @@ def main():
     })
     cumulativeTrendStrategy = CumulativeTrend(
         jsonEnvContent, requestInstance, loggerInstance)
-    cumulativeTrendStrategy.executeCumulativeTrendStrategy()
+    cumulativeTrendStrategy.executeCumulativeTrendStrategy('shibinr')
 
 
 if __name__ == '__main__':
