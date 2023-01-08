@@ -1,2 +1,3 @@
 *.log
 wazirx.json
+__pycache__
