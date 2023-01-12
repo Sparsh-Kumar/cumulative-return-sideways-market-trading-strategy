@@ -24,6 +24,8 @@ class CumulativeTrend(WazirXHelper):
             '''
             kLineDataFrameBefore30Mins = kLineDataFrameBefore30Mins.astype(
                 float)
+            kLineDataFrameBefore30Mins['HumanReadableTime'] = pd.to_datetime(
+                kLineDataFrameBefore30Mins['Time'], unit='s')
             return kLineDataFrameBefore30Mins
         except Exception as e:
             self.loggerInstance.logError(str(e))
@@ -48,7 +50,8 @@ class CumulativeTrend(WazirXHelper):
                 # Sleep for 5 seconds because of API rate limiting.
                 time.sleep(5)
                 kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
-                kLineDataFrame = kLineDataFrame[:6]
+                kLineDataFrame = kLineDataFrame.tail(6)
+                print(kLineDataFrame)
                 cumulativeReturnOfDataFrame = (
                     kLineDataFrame.Close.pct_change() + 1
                 ).cumprod() - 1
@@ -72,6 +75,7 @@ class CumulativeTrend(WazirXHelper):
                     time.sleep(5)
                     kLineDataFrame = self.getDataWith30MinTimeFrame(symbol)
                     kLineDataFrameSinceBuy = kLineDataFrame[kLineDataFrame.Time > timeOfTrade]
+                    print(kLineDataFrameSinceBuy)
                     if len(kLineDataFrameSinceBuy) > 1:
                         cumulativeReturnOfDataFrame = (
                             kLineDataFrameSinceBuy.Close.pct_change() + 1

@@ -12,7 +12,7 @@ def main():
     })
     cumulativeTrendStrategy = CumulativeTrend(
         jsonEnvContent, requestInstance, loggerInstance)
-    cumulativeTrendStrategy.executeCumulativeTrendStrategy('shibinr')
+    # cumulativeTrendStrategy.executeCumulativeTrendStrategy('shibinr', 130378090)
 
 
 if __name__ == '__main__':
